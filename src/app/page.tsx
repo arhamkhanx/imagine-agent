@@ -100,7 +100,7 @@ export default function Studio() {
   };
 
   return (
-    <div className="p-8 max-w-6xl">
+    <div className="p-4 md:p-8 max-w-6xl">
       <h1 className="text-3xl font-bold tracking-tight">Studio</h1>
       <p style={{ color: "var(--muted)" }} className="text-sm mt-1 mb-6">
         Describe what you want. Reference your library with <span className="tag">@handle</span>. An agent

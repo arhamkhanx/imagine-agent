@@ -101,10 +101,10 @@ export default function RefinePanel({
   const viewingLatest = versions.find((v) => v.url === currentUrl)?.seq === latestSeq || currentUrl === sourceUrl;
 
   return (
-    <div className="grid md:grid-cols-[1fr_360px]" style={{ height: "min(80vh, 780px)" }}>
+    <div className="flex flex-col md:grid md:grid-cols-[1fr_360px] md:h-[min(80vh,780px)]">
       {/* Image stage + history */}
-      <div className="flex flex-col min-h-0 border-r" style={{ borderColor: "var(--border)" }}>
-        <div className="flex-1 min-h-0 flex items-center justify-center p-4" style={{ background: "var(--bg-deep)" }}>
+      <div className="flex flex-col min-h-0 border-b md:border-b-0 md:border-r" style={{ borderColor: "var(--border)" }}>
+        <div className="flex-1 min-h-[32vh] md:min-h-0 flex items-center justify-center p-4" style={{ background: "var(--bg-deep)" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={currentUrl} alt="current" className="max-w-full max-h-full object-contain rounded-2xl" />
         </div>
@@ -170,7 +170,7 @@ export default function RefinePanel({
       </div>
 
       {/* Chat pane */}
-      <div className="flex flex-col min-h-0">
+      <div className="flex flex-col min-h-0 h-[58vh] md:h-auto">
         <div className="p-3 border-b text-xs" style={{ borderColor: "var(--border)", color: "var(--muted)" }}>
           Tell the agent what to change. It analyzes this image + your samples, then writes the edit. The new result
           replaces the current image; the old one stays in the journey.

@@ -172,22 +172,21 @@ export default function MoodboardEditor() {
 
   return (
     <div className="flex flex-col h-screen">
-      <div className="flex items-center gap-3 p-4 border-b" style={{ borderColor: "var(--border)" }}>
-        <button className="btn-ghost" style={{ borderRadius: 10, padding: "8px 12px" }} onClick={() => router.push("/moodboards")}>
+      <div className="flex items-center gap-2 md:gap-3 p-3 md:p-4 border-b flex-wrap" style={{ borderColor: "var(--border)" }}>
+        <button className="btn-ghost" style={{ padding: "8px 12px" }} onClick={() => router.push("/moodboards")}>
           ← Back
         </button>
-        <span className="tag">@</span>
         <input
           value={name}
           onChange={(e) => {
             setName(e.target.value);
             scheduleSave(false);
           }}
-          className="max-w-xs"
+          className="flex-1 min-w-[140px] max-w-xs"
           style={{ fontFamily: "var(--font-mono)" }}
         />
-        <label className="btn-ghost" style={{ borderRadius: 10, padding: "8px 12px" }}>
-          + Add images
+        <label className="btn-ghost" style={{ padding: "8px 12px" }}>
+          + Add
           <input
             type="file"
             accept="image/*"
@@ -196,7 +195,7 @@ export default function MoodboardEditor() {
             onChange={(e) => addFiles(Array.from(e.target.files ?? []))}
           />
         </label>
-        <span className="text-sm ml-auto flex items-center gap-2" style={{ color: "var(--muted)" }}>
+        <span className="text-xs md:text-sm w-full md:w-auto md:ml-auto flex items-center gap-2" style={{ color: "var(--muted)" }}>
           <span
             style={{
               width: 8,
