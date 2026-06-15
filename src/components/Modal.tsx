@@ -75,7 +75,7 @@ export function Spinner({ size = 16 }: { size?: number }) {
         border: "2px solid rgba(255,255,255,0.25)",
         borderTopColor: "var(--accent)",
         borderRadius: "50%",
-        animation: "kive-spin 0.7s linear infinite",
+        animation: "imagine-agent-spin 0.7s linear infinite",
       }}
     />
   );

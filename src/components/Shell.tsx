@@ -63,7 +63,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
         style={{ background: "var(--panel)", borderRight: "1px solid var(--border)" }}
       >
         <div className="px-5 pt-6 pb-4">
-          <div className="text-2xl font-bold tracking-tight">kive</div>
+          <div className="text-2xl font-bold tracking-tight">imagine-agent</div>
           <div className="text-xs" style={{ color: "var(--muted)" }}>
             AI fashion content studio
           </div>

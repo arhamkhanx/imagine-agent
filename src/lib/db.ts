@@ -5,10 +5,10 @@ import path from "path";
 const DATA_DIR = path.join(process.cwd(), "data");
 if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
 
-const DB_PATH = path.join(DATA_DIR, "kive.db");
+const DB_PATH = path.join(DATA_DIR, "imagine-agent.db");
 
 // Reuse the connection across hot reloads in dev.
-const globalForDb = globalThis as unknown as { __kiveDb?: Database.Database };
+const globalForDb = globalThis as unknown as { __imagineAgentDb?: Database.Database };
 
 function init(): Database.Database {
   const db = new Database(DB_PATH);
@@ -115,5 +115,5 @@ function init(): Database.Database {
   return db;
 }
 
-export const db: Database.Database = globalForDb.__kiveDb ?? init();
-if (process.env.NODE_ENV !== "production") globalForDb.__kiveDb = db;
+export const db: Database.Database = globalForDb.__imagineAgentDb ?? init();
+if (process.env.NODE_ENV !== "production") globalForDb.__imagineAgentDb = db;

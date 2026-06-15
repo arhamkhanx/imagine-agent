@@ -182,13 +182,13 @@ button {
   font-size: 9px;
 }
 
-@keyframes kive-spin {
+@keyframes imagine-agent-spin {
   to {
     transform: rotate(360deg);
   }
 }
 
-@keyframes kive-pulse {
+@keyframes imagine-agent-pulse {
   0%,
   100% {
     opacity: 0.45;
@@ -201,9 +201,9 @@ button {
 .skeleton {
   background: linear-gradient(90deg, var(--panel-2) 25%, #26262c 50%, var(--panel-2) 75%);
   background-size: 200% 100%;
-  animation: kive-shimmer 1.3s ease-in-out infinite;
+  animation: imagine-agent-shimmer 1.3s ease-in-out infinite;
 }
-@keyframes kive-shimmer {
+@keyframes imagine-agent-shimmer {
   to {
     background-position: -200% 0;
   }

@@ -1,4 +1,4 @@
-# kive — AI fashion content studio
+# imagine-agent — AI fashion content studio
 
 An agentic content-creation tool for fashion brands. Create reusable **models (faces)**, **products**, and **moodboards**, then describe a shot in plain English (`@maya wearing @camel_trench in the style of @soft_minimal`). An agent analyzes your references and the moodboard's aesthetic, writes an optimal, real-camera photography prompt, and renders premium imagery — all powered by xAI's Grok models.
 
@@ -59,7 +59,7 @@ npm run dev
 
 Open <http://localhost:3000>. (If port 3000 is busy, Next will pick the next free port, e.g. 3001 — watch the terminal output.)
 
-The SQLite database (`data/kive.db`) and the `public/uploads/` folder are created automatically on first run, and a default brand is seeded.
+The SQLite database (`data/imagine-agent.db`) and the `public/uploads/` folder are created automatically on first run, and a default brand is seeded.
 
 ### Environment variables
 

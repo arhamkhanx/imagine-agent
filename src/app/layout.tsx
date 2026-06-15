@@ -8,7 +8,7 @@ const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "kive — AI fashion content studio",
+  title: "imagine-agent — AI fashion content studio",
   description: "Create faces, products, moodboards and generate on-brand fashion imagery with an agentic pipeline.",
 };
 

@@ -24,7 +24,7 @@ export function BrandProvider({ children }: { children: React.ReactNode }) {
     setBrands(list);
     setCurrentIdState((prev) => {
       if (prev && list.some((b) => b.id === prev)) return prev;
-      const stored = typeof window !== "undefined" ? localStorage.getItem("kive.brand") : null;
+      const stored = typeof window !== "undefined" ? localStorage.getItem("imagine-agent.brand") : null;
       if (stored && list.some((b) => b.id === stored)) return stored;
       return list[0]?.id ?? "";
     });
@@ -36,7 +36,7 @@ export function BrandProvider({ children }: { children: React.ReactNode }) {
 
   const setCurrentId = (id: string) => {
     setCurrentIdState(id);
-    if (typeof window !== "undefined") localStorage.setItem("kive.brand", id);
+    if (typeof window !== "undefined") localStorage.setItem("imagine-agent.brand", id);
   };
 
   const createBrand = async (name: string) => {
