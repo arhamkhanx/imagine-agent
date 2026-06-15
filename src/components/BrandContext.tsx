@@ -10,6 +10,8 @@ type Ctx = {
   current?: Brand;
   setCurrentId: (id: string) => void;
   createBrand: (name: string) => Promise<void>;
+  renameBrand: (id: string, name: string) => Promise<void>;
+  deleteBrand: (id: string) => Promise<void>;
   refresh: () => Promise<void>;
 };
 
@@ -45,10 +47,21 @@ export function BrandProvider({ children }: { children: React.ReactNode }) {
     setCurrentId(b.id);
   };
 
+  const renameBrand = async (id: string, name: string) => {
+    await api(`/api/brands/${id}`, { method: "PATCH", body: JSON.stringify({ name }) });
+    await refresh();
+  };
+
+  const deleteBrand = async (id: string) => {
+    await api(`/api/brands/${id}`, { method: "DELETE" });
+    if (id === currentId) setCurrentIdState("");
+    await refresh();
+  };
+
   const current = brands.find((b) => b.id === currentId);
 
   return (
-    <BrandCtx.Provider value={{ brands, current, setCurrentId, createBrand, refresh }}>
+    <BrandCtx.Provider value={{ brands, current, setCurrentId, createBrand, renameBrand, deleteBrand, refresh }}>
       {children}
     </BrandCtx.Provider>
   );

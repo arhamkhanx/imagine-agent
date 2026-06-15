@@ -102,6 +102,35 @@ function init(): Database.Database {
     db.exec("ALTER TABLE generations ADD COLUMN batch_id TEXT NOT NULL DEFAULT ''");
   }
 
+  // Version history (image journey) for every image asset.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS image_versions (
+      id TEXT PRIMARY KEY,
+      asset_type TEXT NOT NULL,
+      asset_id TEXT NOT NULL,
+      url TEXT NOT NULL,
+      note TEXT NOT NULL DEFAULT '',
+      seq INTEGER NOT NULL,
+      created_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_versions_asset ON image_versions (asset_type, asset_id, seq);
+  `);
+
+  // Seed an initial version for any pre-existing asset that has none.
+  const seed = (table: string, type: string, note: string, whereUrl = "") =>
+    db.exec(`
+      INSERT INTO image_versions (id, asset_type, asset_id, url, note, seq, created_at)
+      SELECT lower(hex(randomblob(8))), '${type}', t.id, t.url, '${note}', 1, t.created_at
+      FROM ${table} t
+      WHERE ${whereUrl} NOT EXISTS (
+        SELECT 1 FROM image_versions v WHERE v.asset_type = '${type}' AND v.asset_id = t.id
+      );
+    `);
+  seed("face_images", "face_image", "original");
+  seed("product_images", "product_image", "original");
+  seed("moodboard_items", "moodboard_item", "original");
+  seed("generations", "generation", "generated", "t.url IS NOT NULL AND");
+
   // Seed a default brand if none exists.
   const count = db.prepare("SELECT COUNT(*) AS c FROM brands").get() as { c: number };
   if (count.c === 0) {

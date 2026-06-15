@@ -1,11 +1,12 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api, fileToDataUri } from "@/lib/client";
 import { Spinner } from "./Modal";
-import { MAX_SUBJECT_IMAGES } from "@/lib/limits";
 
-type Gen = { id: string; url: string; final_prompt: string; agent_notes: string };
+export type AssetType = "face_image" | "product_image" | "moodboard_item" | "generation";
+type Version = { id: string; url: string; note: string; seq: number; created_at: number };
+type RefineRes = { url: string; rationale: string; prompt: string; versions: Version[] };
 
 type Msg =
   | { role: "user"; text: string; thumbs: string[] }
@@ -15,32 +16,45 @@ export default function RefinePanel({
   brandId,
   sourceUrl,
   contextLabel,
-  subject,
-  onCreatedGeneration,
-  onSavedToSubject,
+  asset,
+  allowFork = true,
+  onUpdated,
 }: {
   brandId: string;
   sourceUrl: string;
   contextLabel: string;
-  subject?: { kind: "face" | "product"; id: string; endpoint: string; count: number };
-  onCreatedGeneration?: () => void;
-  onSavedToSubject?: () => void;
+  asset: { type: AssetType; id: string };
+  allowFork?: boolean;
+  onUpdated?: () => void;
 }) {
   const [thread, setThread] = useState<Msg[]>([]);
+  const [versions, setVersions] = useState<Version[]>([]);
   const [currentUrl, setCurrentUrl] = useState(sourceUrl);
   const [input, setInput] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  const [savedCount, setSavedCount] = useState(0);
-  const [savedUrls, setSavedUrls] = useState<string[]>([]);
+  const [note, setNote] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const subjectFull = subject ? subject.count + savedCount >= MAX_SUBJECT_IMAGES : false;
+  const loadVersions = useCallback(async () => {
+    try {
+      setVersions(await api<Version[]>(`/api/assets/versions?type=${asset.type}&id=${asset.id}`));
+    } catch {
+      /* ignore */
+    }
+  }, [asset.type, asset.id]);
+
+  useEffect(() => {
+    loadVersions();
+  }, [loadVersions]);
+
+  const latestSeq = versions.length ? Math.max(...versions.map((v) => v.seq)) : 0;
 
   const send = async () => {
     if (!input.trim() || busy) return;
     setErr("");
+    setNote("");
     const attachments = await Promise.all(files.map(fileToDataUri));
     setThread((t) => [...t, { role: "user", text: input, thumbs: attachments }]);
     const instruction = input;
@@ -48,7 +62,7 @@ export default function RefinePanel({
     setFiles([]);
     setBusy(true);
     try {
-      const gen = await api<Gen>("/api/refine", {
+      const res = await api<RefineRes>("/api/refine", {
         method: "POST",
         body: JSON.stringify({
           brandId,
@@ -56,14 +70,14 @@ export default function RefinePanel({
           instruction,
           attachments,
           contextLabel,
+          assetType: asset.type,
+          assetId: asset.id,
         }),
       });
-      setThread((t) => [
-        ...t,
-        { role: "agent", rationale: gen.agent_notes, prompt: gen.final_prompt, url: gen.url },
-      ]);
-      setCurrentUrl(gen.url);
-      onCreatedGeneration?.();
+      setThread((t) => [...t, { role: "agent", rationale: res.rationale, prompt: res.prompt, url: res.url }]);
+      setCurrentUrl(res.url);
+      setVersions(res.versions);
+      onUpdated?.();
     } catch (e) {
       setErr((e as Error).message);
     } finally {
@@ -71,59 +85,95 @@ export default function RefinePanel({
     }
   };
 
-  const saveToSubject = async () => {
-    if (!subject) return;
+  const fork = async () => {
     try {
-      await api(`${subject.endpoint}/${subject.id}/images`, {
+      await api("/api/assets/fork", {
         method: "POST",
-        body: JSON.stringify({ url: currentUrl, label: "refined" }),
+        body: JSON.stringify({ assetType: asset.type, assetId: asset.id, url: currentUrl }),
       });
-      setSavedCount((c) => c + 1);
-      setSavedUrls((u) => [...u, currentUrl]);
-      onSavedToSubject?.();
+      setNote("Saved as a new independent asset.");
+      onUpdated?.();
     } catch (e) {
       setErr((e as Error).message);
     }
   };
 
-  const changed = currentUrl !== sourceUrl;
-  const alreadySaved = savedUrls.includes(currentUrl);
+  const viewingLatest = versions.find((v) => v.url === currentUrl)?.seq === latestSeq || currentUrl === sourceUrl;
 
   return (
-    <div className="grid md:grid-cols-[1fr_360px] gap-0" style={{ height: "min(78vh, 760px)" }}>
-      {/* Image stage */}
+    <div className="grid md:grid-cols-[1fr_360px]" style={{ height: "min(80vh, 780px)" }}>
+      {/* Image stage + history */}
       <div className="flex flex-col min-h-0 border-r" style={{ borderColor: "var(--border)" }}>
-        <div className="flex-1 min-h-0 flex items-center justify-center p-4 bg-black/40">
+        <div className="flex-1 min-h-0 flex items-center justify-center p-4" style={{ background: "var(--bg-deep)" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={currentUrl} alt="current" className="max-w-full max-h-full object-contain rounded-lg" />
+          <img src={currentUrl} alt="current" className="max-w-full max-h-full object-contain rounded-2xl" />
         </div>
-        <div className="p-3 flex items-center gap-2 border-t" style={{ borderColor: "var(--border)" }}>
-          <span className="text-xs" style={{ color: "var(--muted)" }}>
-            {changed ? "Latest refinement" : "Original"}
-          </span>
-          <div className="ml-auto flex gap-2">
-            <a className="btn-ghost" style={{ borderRadius: 10, padding: "6px 12px", fontSize: 13, textDecoration: "none" }} href={currentUrl} download>
-              Download
-            </a>
-            {subject && changed && (
-              <button
-                className="btn"
-                style={{ padding: "6px 12px", fontSize: 13 }}
-                onClick={saveToSubject}
-                disabled={subjectFull || alreadySaved}
-                title={subjectFull ? `Limit ${MAX_SUBJECT_IMAGES} reached` : ""}
-              >
-                {alreadySaved ? "Saved ✓" : subjectFull ? "Limit reached" : `Save to @ (${subject.count + savedCount}/${MAX_SUBJECT_IMAGES})`}
-              </button>
-            )}
+
+        {/* Version history strip */}
+        <div className="p-3 border-t" style={{ borderColor: "var(--border)" }}>
+          <div className="flex items-center justify-between mb-2">
+            <span className="label" style={{ margin: 0 }}>
+              Journey · {versions.length} version{versions.length === 1 ? "" : "s"}
+            </span>
+            <div className="flex gap-2">
+              <a className="btn-ghost" style={{ padding: "5px 12px", fontSize: 11, textDecoration: "none" }} href={currentUrl} download>
+                Download
+              </a>
+              {allowFork && (
+                <button
+                  className="btn"
+                  style={{ padding: "5px 12px", fontSize: 11 }}
+                  onClick={fork}
+                  title="Make this exact image its own standalone asset"
+                >
+                  Make independent
+                </button>
+              )}
+            </div>
           </div>
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {versions.map((v) => {
+              const active = v.url === currentUrl;
+              const isLatest = v.seq === latestSeq;
+              return (
+                <button
+                  key={v.id}
+                  onClick={() => setCurrentUrl(v.url)}
+                  className="relative shrink-0 rounded-xl overflow-hidden"
+                  style={{ border: active ? "2px solid var(--accent)" : "1px solid var(--border)" }}
+                  title={v.note || (isLatest ? "current" : `version ${v.seq}`)}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={v.url} alt="" className="w-16 h-20 object-cover" />
+                  <span
+                    className="absolute bottom-0 inset-x-0 text-center"
+                    style={{ fontSize: 9, background: "rgba(0,0,0,0.55)", color: "#fff" }}
+                  >
+                    {isLatest ? "current" : `v${v.seq}`}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          {note && (
+            <div className="text-xs mt-2" style={{ color: "var(--accent-strong)" }}>
+              {note}
+            </div>
+          )}
+          {!viewingLatest && (
+            <div className="text-xs mt-2" style={{ color: "var(--muted)" }}>
+              Viewing an older version — editing from here will branch a new latest. Use “Make independent” to keep it
+              as its own asset.
+            </div>
+          )}
         </div>
       </div>
 
       {/* Chat pane */}
       <div className="flex flex-col min-h-0">
         <div className="p-3 border-b text-xs" style={{ borderColor: "var(--border)", color: "var(--muted)" }}>
-          Tell the agent what to change. It analyzes this image + your samples, then writes the edit.
+          Tell the agent what to change. It analyzes this image + your samples, then writes the edit. The new result
+          replaces the current image; the old one stays in the journey.
         </div>
         <div className="flex-1 min-h-0 overflow-y-auto p-3 flex flex-col gap-3">
           {thread.length === 0 && (
@@ -134,7 +184,7 @@ export default function RefinePanel({
           {thread.map((m, i) =>
             m.role === "user" ? (
               <div key={i} className="self-end max-w-[90%]">
-                <div className="rounded-2xl px-3 py-2 text-sm" style={{ background: "var(--accent)", color: "#0a0a0b" }}>
+                <div className="rounded-2xl px-3 py-2 text-sm" style={{ background: "var(--accent)", color: "var(--on-accent)" }}>
                   {m.text}
                 </div>
                 {m.thumbs.length > 0 && (
@@ -170,13 +220,13 @@ export default function RefinePanel({
           )}
           {busy && (
             <div className="self-start flex items-center gap-2 text-sm" style={{ color: "var(--muted)" }}>
-              <Spinner /> Agent is analyzing & re-rendering…
+              <Spinner /> Agent is analyzing &amp; re-rendering…
             </div>
           )}
         </div>
 
         {err && (
-          <div className="px-3 py-2 text-sm" style={{ color: "#ff8a9b" }}>
+          <div className="px-3 py-2 text-sm" style={{ color: "var(--danger)" }}>
             {err}
           </div>
         )}
@@ -198,12 +248,7 @@ export default function RefinePanel({
             </div>
           )}
           <div className="flex items-end gap-2">
-            <button
-              className="btn-ghost"
-              style={{ borderRadius: 10, padding: "10px 12px" }}
-              onClick={() => fileRef.current?.click()}
-              title="Attach reference samples"
-            >
+            <button className="btn-ghost" style={{ padding: "10px 12px" }} onClick={() => fileRef.current?.click()} title="Attach reference samples">
               📎
             </button>
             <input

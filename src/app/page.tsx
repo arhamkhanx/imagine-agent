@@ -141,7 +141,7 @@ export default function Studio() {
                   className="tag"
                   style={{
                     background: count === n ? "var(--accent)" : "var(--panel-2)",
-                    color: count === n ? "#0a0a0b" : "var(--accent)",
+                    color: count === n ? "#042624" : "var(--accent)",
                     cursor: "pointer",
                   }}
                 >
@@ -218,7 +218,7 @@ function ResultGroup({
   onRefined: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [refineUrl, setRefineUrl] = useState<string | null>(null);
+  const [refineGen, setRefineGen] = useState<Generation | null>(null);
   const head = gens[0];
   const images = gens.filter((g) => g.url);
   const multi = images.length > 1;
@@ -230,7 +230,7 @@ function ResultGroup({
           {images.map((g) => (
             <button
               key={g.id}
-              onClick={() => setRefineUrl(g.url!)}
+              onClick={() => setRefineGen(g)}
               className="block w-full group relative"
               style={{ background: "transparent", border: "none", padding: 0, cursor: "pointer" }}
               title="Click to refine with the agent"
@@ -257,13 +257,26 @@ function ResultGroup({
           <p className="text-sm flex-1">{head.instruction}</p>
           {multi && <span className="tag shrink-0">{images.length} variants</span>}
         </div>
-        <button
-          onClick={() => setOpen((v) => !v)}
-          className="text-xs"
-          style={{ color: "var(--muted)", background: "transparent", border: "none", padding: 0 }}
-        >
-          {open ? "Hide" : "Show"} agent prompt & notes
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setOpen((v) => !v)}
+            className="text-xs"
+            style={{ color: "var(--muted)", background: "transparent", border: "none", padding: 0 }}
+          >
+            {open ? "Hide" : "Show"} agent prompt & notes
+          </button>
+          <button
+            onClick={async () => {
+              if (!confirm("Delete this result?")) return;
+              await Promise.all(gens.map((g) => api(`/api/generations/${g.id}`, { method: "DELETE" })));
+              onRefined();
+            }}
+            className="text-xs"
+            style={{ color: "var(--danger)", background: "transparent", border: "none", padding: 0 }}
+          >
+            Delete
+          </button>
+        </div>
         {open && (
           <div className="mt-2 text-xs" style={{ color: "var(--muted)" }}>
             <div className="label" style={{ marginTop: 8 }}>
@@ -276,15 +289,16 @@ function ResultGroup({
         )}
       </div>
 
-      <Modal open={!!refineUrl} onClose={() => setRefineUrl(null)} width={1000}>
-        {refineUrl && (
+      <Modal open={!!refineGen} onClose={() => setRefineGen(null)} width={1040}>
+        {refineGen?.url && (
           <>
-            <ModalHeader title="Refine result" subtitle="The agent edits with your comments & samples" onClose={() => setRefineUrl(null)} />
+            <ModalHeader title="Refine result" subtitle="Agent edits with your comments & samples · full version history" onClose={() => setRefineGen(null)} />
             <RefinePanel
               brandId={brandId}
-              sourceUrl={refineUrl}
+              sourceUrl={refineGen.url}
               contextLabel={`a generated fashion image. Original brief: ${head.instruction}`}
-              onCreatedGeneration={onRefined}
+              asset={{ type: "generation", id: refineGen.id }}
+              onUpdated={onRefined}
             />
           </>
         )}

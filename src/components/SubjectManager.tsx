@@ -413,7 +413,7 @@ function Stepper({ step, labels }: { step: number; labels: string[] }) {
                 width: 22,
                 height: 22,
                 background: i <= step ? "var(--accent)" : "var(--panel-2)",
-                color: i <= step ? "#0a0a0b" : "var(--muted)",
+                color: i <= step ? "#042624" : "var(--muted)",
               }}
             >
               {i + 1}
@@ -600,7 +600,7 @@ function DetailModal({
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={im.url} alt={im.label} title={im.label} className="w-full aspect-[3/4] object-cover" />
                 {im.is_primary === 1 && (
-                  <span className="absolute top-1 left-1 text-[10px] px-1.5 py-0.5 rounded" style={{ background: "var(--accent)", color: "#0a0a0b" }}>
+                  <span className="absolute top-1 left-1 text-[10px] px-1.5 py-0.5 rounded" style={{ background: "var(--accent)", color: "#042624" }}>
                     primary
                   </span>
                 )}
@@ -658,7 +658,7 @@ function DetailModal({
                   className="tag"
                   style={{
                     background: on ? "var(--accent)" : "var(--panel-2)",
-                    color: on ? "#0a0a0b" : "var(--accent)",
+                    color: on ? "#042624" : "var(--accent)",
                     opacity: disabled ? 0.4 : 1,
                     cursor: disabled ? "not-allowed" : "pointer",
                   }}
@@ -703,8 +703,8 @@ function DetailModal({
               brandId={brandId}
               sourceUrl={refineImg.url}
               contextLabel={`a ${kind} image of @${item.name} (${labelFor(refineImg.label)})`}
-              subject={{ kind, id: item.id, endpoint, count: item.images.length }}
-              onSavedToSubject={onChange}
+              asset={{ type: kind === "face" ? "face_image" : "product_image", id: refineImg.id }}
+              onUpdated={onChange}
             />
           </>
         )}

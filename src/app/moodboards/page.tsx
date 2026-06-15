@@ -64,20 +64,34 @@ export default function MoodboardsPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {boards.map((b) => (
-            <Link key={b.id} href={`/moodboards/${b.id}`} className="card overflow-hidden block">
-              <div className="grid grid-cols-3 gap-0.5 aspect-video bg-black/40">
-                {b.items.slice(0, 6).map((it) => (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img key={it.id} src={it.url} alt="" className="w-full h-full object-cover" />
-                ))}
-              </div>
-              <div className="p-4 flex items-center justify-between">
-                <div className="tag">@{b.name}</div>
-                <span className="text-xs" style={{ color: "var(--muted)" }}>
-                  {b.items.length} image{b.items.length === 1 ? "" : "s"}
-                </span>
-              </div>
-            </Link>
+            <div key={b.id} className="card overflow-hidden relative group">
+              <Link href={`/moodboards/${b.id}`} className="block">
+                <div className="grid grid-cols-3 gap-0.5 aspect-video" style={{ background: "var(--bg-deep)" }}>
+                  {b.items.slice(0, 6).map((it) => (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img key={it.id} src={it.url} alt="" className="w-full h-full object-cover" />
+                  ))}
+                </div>
+                <div className="p-4 flex items-center justify-between">
+                  <div className="tag">@{b.name}</div>
+                  <span className="text-xs" style={{ color: "var(--muted)" }}>
+                    {b.items.length} image{b.items.length === 1 ? "" : "s"}
+                  </span>
+                </div>
+              </Link>
+              <button
+                className="btn-danger absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition"
+                style={{ padding: "5px 11px", fontSize: 11 }}
+                onClick={async (e) => {
+                  e.preventDefault();
+                  if (!confirm(`Delete moodboard @${b.name}?`)) return;
+                  await api(`/api/moodboards/${b.id}`, { method: "DELETE" });
+                  load();
+                }}
+              >
+                Delete
+              </button>
+            </div>
           ))}
         </div>
       )}

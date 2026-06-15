@@ -3,6 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { api, fileToDataUri } from "@/lib/client";
+import { useBrand } from "@/components/BrandContext";
+import Modal, { ModalHeader } from "@/components/Modal";
+import RefinePanel from "@/components/RefinePanel";
 
 type CanvasItem = {
   key: string;
@@ -28,12 +31,14 @@ type SaveStatus = "saved" | "saving" | "idle";
 export default function MoodboardEditor() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const { current } = useBrand();
   const id = params.id;
 
   const [name, setName] = useState("");
   const [items, setItems] = useState<CanvasItem[]>([]);
   const [status, setStatus] = useState<SaveStatus>("saved");
   const [maxZ, setMaxZ] = useState(1);
+  const [refineItem, setRefineItem] = useState<CanvasItem | null>(null);
 
   // Refs so the debounced saver always reads the latest values.
   const itemsRef = useRef<CanvasItem[]>([]);
@@ -204,7 +209,34 @@ export default function MoodboardEditor() {
         </span>
       </div>
 
-      <Canvas items={items} setItems={setItems} onFront={bringToFront} onRemove={removeItem} onDropFiles={addFiles} onReposition={() => scheduleSave(false)} />
+      <Canvas
+        items={items}
+        setItems={setItems}
+        onFront={bringToFront}
+        onRemove={removeItem}
+        onDropFiles={addFiles}
+        onReposition={() => scheduleSave(false)}
+        onRefine={(it) => setRefineItem(it)}
+      />
+
+      <Modal open={!!refineItem} onClose={() => setRefineItem(null)} width={1040}>
+        {refineItem?.id && refineItem.url && current && (
+          <>
+            <ModalHeader title="Refine moodboard image" subtitle="Agent edits with your comments & samples" onClose={() => setRefineItem(null)} />
+            <RefinePanel
+              brandId={current.id}
+              sourceUrl={refineItem.url}
+              contextLabel="an image on a fashion moodboard"
+              asset={{ type: "moodboard_item", id: refineItem.id }}
+              allowFork={false}
+              onUpdated={() => {
+                load();
+                scheduleSave(true);
+              }}
+            />
+          </>
+        )}
+      </Modal>
     </div>
   );
 }
@@ -216,6 +248,7 @@ function Canvas({
   onRemove,
   onDropFiles,
   onReposition,
+  onRefine,
 }: {
   items: CanvasItem[];
   setItems: React.Dispatch<React.SetStateAction<CanvasItem[]>>;
@@ -223,6 +256,7 @@ function Canvas({
   onRemove: (key: string) => void;
   onDropFiles: (files: File[]) => void;
   onReposition: () => void;
+  onRefine: (it: CanvasItem) => void;
 }) {
   const drag = useRef<{ key: string; mode: "move" | "resize"; sx: number; sy: number; ox: number; oy: number; ow: number; oh: number; moved: boolean } | null>(null);
 
@@ -289,6 +323,17 @@ function Canvas({
           >
             ✕
           </button>
+          {it.id && (
+            <button
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={() => onRefine(it)}
+              className="absolute top-1 left-1 opacity-0 group-hover:opacity-100 transition"
+              style={{ background: "rgba(0,0,0,0.6)", color: "#fff", borderRadius: 8, padding: "2px 8px", fontSize: 12, border: "none" }}
+              title="Refine with agent"
+            >
+              ✎
+            </button>
+          )}
           <div
             onPointerDown={(e) => onPointerDown(e, it, "resize")}
             className="absolute bottom-0 right-0 opacity-0 group-hover:opacity-100"

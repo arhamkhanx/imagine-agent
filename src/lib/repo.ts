@@ -39,6 +39,55 @@ export type Generation = {
   created_at: number;
 };
 
+// ---- Image versions (asset journey) ----
+export type AssetType = "face_image" | "product_image" | "moodboard_item" | "generation";
+export type Version = {
+  id: string;
+  asset_type: AssetType;
+  asset_id: string;
+  url: string;
+  note: string;
+  seq: number;
+  created_at: number;
+};
+
+export const listVersions = (type: AssetType, assetId: string) =>
+  db
+    .prepare("SELECT * FROM image_versions WHERE asset_type = ? AND asset_id = ? ORDER BY seq ASC")
+    .all(type, assetId) as Version[];
+
+export function addVersion(type: AssetType, assetId: string, url: string, note: string): Version {
+  const max = db
+    .prepare("SELECT COALESCE(MAX(seq), 0) AS m FROM image_versions WHERE asset_type = ? AND asset_id = ?")
+    .get(type, assetId) as { m: number };
+  const v: Version = {
+    id: nanoid(12),
+    asset_type: type,
+    asset_id: assetId,
+    url,
+    note,
+    seq: max.m + 1,
+    created_at: Date.now(),
+  };
+  db.prepare(
+    "INSERT INTO image_versions (id, asset_type, asset_id, url, note, seq, created_at) VALUES (@id, @asset_type, @asset_id, @url, @note, @seq, @created_at)"
+  ).run(v);
+  return v;
+}
+
+/** Update the displayed url of an asset (latest version replaces it). */
+export function setAssetUrl(type: AssetType, assetId: string, url: string) {
+  const table =
+    type === "face_image"
+      ? "face_images"
+      : type === "product_image"
+      ? "product_images"
+      : type === "moodboard_item"
+      ? "moodboard_items"
+      : "generations";
+  db.prepare(`UPDATE ${table} SET url = ? WHERE id = ?`).run(url, assetId);
+}
+
 // ---- Brands ----
 export const listBrands = () =>
   db.prepare("SELECT * FROM brands ORDER BY created_at ASC").all() as Brand[];
@@ -49,6 +98,10 @@ export function createBrand(name: string): Brand {
   db.prepare("INSERT INTO brands (id, name, created_at) VALUES (?, ?, ?)").run(b.id, b.name, b.created_at);
   return b;
 }
+export const updateBrand = (id: string, name: string) =>
+  db.prepare("UPDATE brands SET name = ? WHERE id = ?").run(name, id);
+export const deleteBrand = (id: string) => db.prepare("DELETE FROM brands WHERE id = ?").run(id);
+export const brandCount = () => (db.prepare("SELECT COUNT(*) AS c FROM brands").get() as { c: number }).c;
 
 // ---- Faces ----
 export const listFaces = (brandId: string) =>
@@ -74,6 +127,7 @@ export function addFaceImage(faceId: string, url: string, label: string, isPrima
   db.prepare(
     "INSERT INTO face_images (id, face_id, url, label, is_primary, created_at) VALUES (?, ?, ?, ?, ?, ?)"
   ).run(img.id, faceId, img.url, img.label, img.is_primary, img.created_at);
+  addVersion("face_image", img.id, url, "original");
   return img;
 }
 export const getFaceImage = (id: string) =>
@@ -114,6 +168,7 @@ export function addProductImage(productId: string, url: string, label: string, i
   db.prepare(
     "INSERT INTO product_images (id, product_id, url, label, is_primary, created_at) VALUES (?, ?, ?, ?, ?, ?)"
   ).run(img.id, productId, img.url, img.label, img.is_primary, img.created_at);
+  addVersion("product_image", img.id, url, "original");
   return img;
 }
 export const getProductImage = (id: string) =>
@@ -159,8 +214,11 @@ export function addMoodboardItem(
   db.prepare(
     "INSERT INTO moodboard_items (id, moodboard_id, url, x, y, w, h, z, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
   ).run(it.id, moodboardId, it.url, it.x, it.y, it.w, it.h, it.z, it.created_at);
+  addVersion("moodboard_item", it.id, url, "original");
   return it;
 }
+export const getMoodboardItem = (id: string) =>
+  db.prepare("SELECT * FROM moodboard_items WHERE id = ?").get(id) as MoodboardItem | undefined;
 export const updateMoodboardItem = (
   id: string,
   pos: { x: number; y: number; w: number; h: number; z: number }
@@ -174,11 +232,16 @@ export const deleteMoodboardItem = (id: string) =>
 // ---- Generations ----
 export const listGenerations = (brandId: string) =>
   db.prepare("SELECT * FROM generations WHERE brand_id = ? ORDER BY created_at DESC LIMIT 100").all(brandId) as Generation[];
+export const getGeneration = (id: string) =>
+  db.prepare("SELECT * FROM generations WHERE id = ?").get(id) as Generation | undefined;
+export const deleteGeneration = (id: string) =>
+  db.prepare("DELETE FROM generations WHERE id = ?").run(id);
 export function createGeneration(g: Omit<Generation, "id" | "created_at">): Generation {
   const full: Generation = { ...g, id: nanoid(12), created_at: Date.now() };
   db.prepare(
     `INSERT INTO generations (id, brand_id, batch_id, instruction, final_prompt, agent_notes, refs, url, aspect_ratio, status, error, created_at)
      VALUES (@id, @brand_id, @batch_id, @instruction, @final_prompt, @agent_notes, @refs, @url, @aspect_ratio, @status, @error, @created_at)`
   ).run(full);
+  if (full.url) addVersion("generation", full.id, full.url, "generated");
   return full;
 }
